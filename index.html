@@ -1053,6 +1053,7 @@
             const ccRows = ccDataText.split(/\r\n|\n|\r/).filter(row => row.trim() !== '');
             
             let processedCount = 0;
+            let matchedNumbers = new Set();
             
             // Process each CC record
             ccRows.forEach(row => {
@@ -1095,35 +1096,42 @@
                     }
                 }
                 
-                // Find matching scrap data item
-                const matchingItem = scrapData.find(item => 
-                    item.normalizedNumber === phoneNumber || 
-                    phoneNumber.includes(item.normalizedNumber) || 
-                    item.normalizedNumber.includes(phoneNumber)
-                );
-                
-                if (matchingItem) {
-                    if (staffId !== null && obAgentIDs.has(staffId)) {
-                        matchingItem.status = 'Closed';
-                        matchingItem.agentId = staffId;
-                        matchingItem.callDate = callDate;
+                // Find matching scrap data item - improved matching logic
+                for (let i = 0; i < scrapData.length; i++) {
+                    const item = scrapData[i];
+                    
+                    // Check if this number matches (with or without leading zero)
+                    if (phoneNumber === item.normalizedNumber || 
+                        phoneNumber === '0' + item.normalizedNumber ||
+                        item.normalizedNumber === '0' + phoneNumber ||
+                        phoneNumber === item.normalizedNumber.substring(1) ||
+                        item.normalizedNumber === phoneNumber.substring(1)) {
                         
-                        // Preserve existing remarks if they exist in other columns
-                        if (matchingItem.columns.length > 6 && matchingItem.columns[6]) {
-                            matchingItem.remarks = matchingItem.columns[6] + ` | OB Agent ID ${staffId} found`;
-                        } else {
-                            matchingItem.remarks = `OB Agent ID ${staffId} found`;
+                        matchedNumbers.add(item.normalizedNumber);
+                        
+                        if (staffId !== null && obAgentIDs.has(staffId)) {
+                            item.status = 'Closed';
+                            item.agentId = staffId;
+                            item.callDate = callDate;
+                            
+                            // Preserve existing remarks if they exist in other columns
+                            if (item.columns.length > 6 && item.columns[6]) {
+                                item.remarks = item.columns[6] + ` | OB Agent ID ${staffId} found`;
+                            } else {
+                                item.remarks = `OB Agent ID ${staffId} found`;
+                            }
+                            processedCount++;
+                        } else if (item.status === 'Pending') {
+                            item.status = 'Open';
+                            // Preserve existing remarks if they exist in other columns
+                            if (item.columns.length > 6 && item.columns[6]) {
+                                item.remarks = item.columns[6] + (staffId ? ' | No OB Agent ID found' : ' | No Staff ID found');
+                            } else {
+                                item.remarks = staffId ? 'No OB Agent ID found' : 'No Staff ID found';
+                            }
+                            processedCount++;
                         }
-                        processedCount++;
-                    } else if (matchingItem.status === 'Pending') {
-                        matchingItem.status = 'Open';
-                        // Preserve existing remarks if they exist in other columns
-                        if (matchingItem.columns.length > 6 && matchingItem.columns[6]) {
-                            matchingItem.remarks = matchingItem.columns[6] + (staffId ? ' | No OB Agent ID found' : ' | No Staff ID found');
-                        } else {
-                            matchingItem.remarks = staffId ? 'No OB Agent ID found' : 'No Staff ID found';
-                        }
-                        processedCount++;
+                        break; // Found a match, move to next CC record
                     }
                 }
             });
@@ -1135,9 +1143,14 @@
             updateCounter();
             
             if (processedCount > 0) {
-                showCopyStatus(`Updated status for ${processedCount} numbers`, true);
+                showCopyStatus(`Updated status for ${processedCount} numbers (${matchedNumbers.size} unique numbers matched)`, true);
             } else {
-                showCopyStatus('No matching numbers found in CC data', false);
+                // Check if we found numbers but no OB agents
+                if (matchedNumbers.size > 0) {
+                    showCopyStatus(`Found ${matchedNumbers.size} matching numbers but no OB Agent IDs`, true);
+                } else {
+                    showCopyStatus('No matching numbers found between scrap data and CC records', false);
+                }
             }
         }
 
