@@ -449,6 +449,15 @@
             display: none;
         }
 
+        .remaining-numbers {
+            background-color: var(--highlight);
+            padding: 1.2rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+            display: none;
+        }
+
         .counter-row {
             display: flex;
             margin-bottom: 0.6rem;
@@ -671,6 +680,13 @@
             </div>
         </div>
 
+        <div id="remainingNumbers" class="remaining-numbers">
+            <div class="counter-row">
+                <span class="counter-label">Pending Numbers:</span>
+                <span class="counter-value" id="pendingNumbers">0</span>
+            </div>
+        </div>
+
         <div class="copy-status" id="copyStatus">Ready</div>
 
         <div class="output-section">
@@ -710,13 +726,15 @@
                             <th>D</th>
                             <th>E</th>
                             <th>Status</th>
+                            <th>Agent ID</th>
+                            <th>Call Date</th>
                             <th>Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -786,37 +804,7 @@
         // Store processed data for later use
         let scrapData = [];
         let currentIndex = 0;
-        let obAgentIDs = new Set([
-            // Default OB Agent IDs
-            46857, 10949, 4295, 45668, 45720, 11099, 44715, 48343, 46973, 54884, 2743, 48618, 48641, 48152, 45403, 2323, 
-            48646, 4826, 11911, 44372, 4900, 47923, 47455, 48587, 54888, 3239, 2680, 48883, 47856, 46238, 48882, 46771, 
-            48362, 44799, 48036, 48375, 44761, 47792, 44457, 48872, 46088, 48126, 2697, 43942, 43207, 46288, 43406, 48396, 
-            2101, 54871, 48664, 48932, 48606, 2593, 11488, 44374, 2413, 43365, 44312, 46487, 42234, 48122, 43647, 45470, 
-            11929, 45863, 2547, 46958, 11475, 46779, 48623, 47104, 47100, 48614, 43075, 48277, 44512, 43393, 42113, 45964, 
-            46633, 48346, 42482, 3011, 44790, 2453, 42141, 2681, 2225, 43171, 49026, 48265, 48805, 46871, 46543, 46019, 
-            42071, 47850, 3024, 2726, 11407, 3070, 46602, 54872, 48594, 2434, 48284, 45910, 3091, 46976, 46002, 48795, 
-            47829, 48048, 11797, 44836, 5675, 48808, 44551, 48297, 44877, 4790, 47838, 46067, 2267, 49091, 48342, 42002, 
-            6364, 48796, 45779, 48313, 6058, 48215, 2282, 48609, 46854, 44619, 48120, 45878, 42500, 3346, 49128, 42036, 
-            4937, 46654, 43930, 45474, 54883, 43810, 48777, 48197, 11888, 46450, 43760, 43272, 49130, 45658, 48865, 48133, 
-            42219, 46849, 54870, 48972, 48925, 46837, 48368, 48886, 47934, 48638, 49047, 49133, 43374, 42856, 47916, 46366, 
-            46291, 44000, 48690, 44041, 45000, 47878, 44080, 44015, 2706, 48616, 49145, 48046, 46931, 46641, 48665, 49112, 
-            48642, 46966, 6050, 47449, 45833, 46877, 48387, 48931, 49111, 48739, 45570, 44788, 45670, 48417, 45545, 2800, 
-            48671, 48801, 4448, 48354, 47750, 46936, 43856, 2942, 3932, 47786, 48586, 48870, 42006, 44144, 4002, 48800, 
-            48667, 44688, 2846, 3330, 45854, 48194, 3143, 49152, 49029, 42265, 3231, 45673, 48052, 48927, 42504, 4355, 
-            49123, 48153, 42046, 2946, 48621, 43593, 48988, 44545, 45660, 48813, 48659, 48033, 4048, 45401, 46466, 42009, 
-            48328, 48949, 3054, 49052, 49021, 48878, 2284, 48863, 46962, 49076, 45461, 46824, 48896, 45980, 44554, 48906, 
-            48745, 4385, 43874, 44699, 44115, 48652, 48971, 43713, 4037, 48975, 3903, 49002, 42172, 49088, 49087, 2919, 
-            44184, 48011, 48706, 48137, 48034, 48803, 48910, 47393, 46770, 47855, 3167, 48504, 48781, 48729, 47075, 48992, 
-            45913, 4500, 42003, 48890, 46681, 48741, 4696, 47742, 44188, 47961, 47487, 48676, 47950, 49134, 48718, 48782, 
-            46693, 4945, 43753, 2763, 47427, 3710, 49120, 48981, 11848, 48054, 48394, 48864, 3025, 54895, 49043, 2902, 
-            48383, 46471, 49151, 48709, 48163, 48151, 48941, 2755, 49044, 3009, 49146, 46923, 45880, 48854, 47745, 49110, 
-            44169, 4276, 43048, 49006, 44156, 48708, 48702, 48884, 46457, 49031, 49142, 4386, 49109, 43304, 49041, 2868, 
-            49025, 49007, 47754, 44862, 49045, 48207, 47125, 45992, 49141, 43147, 49046, 5991, 46772, 4882, 49147, 48982, 
-            48268, 47788, 48135, 45807, 47784, 46875, 48836, 46872, 42087, 45879, 44472, 43319, 48900, 48688, 43395, 46351, 
-            49140, 49154, 48802, 6042, 48902, 49099, 49080, 48668, 2723, 48697, 48682, 48978, 48123, 47079, 49093, 48707, 
-            49129, 49150, 49137, 48714, 49079, 48156, 48833, 46093, 48711, 48851, 43625, 48898, 49034, 48689, 49138, 48698, 
-            49105, 48935, 49102, 49020, 49148, 48936, 47207, 49032, 48627, 48282, 49040, 47230, 48380
-        ]);
+        let obAgentIDs = new Set(['0000']); // Default OB Agent ID
         let isDarkMode = false;
         let currentFilter = 'all';
 
@@ -982,7 +970,7 @@
                 const columns = row.split(/\t/);
                 let phoneNumber = columns[0] ? columns[0].trim() : '';
                 
-                // Preserve all original columns (up to 10 columns)
+                // Preserve all original columns (up to 5 columns)
                 const allColumns = [];
                 for (let i = 0; i < Math.max(columns.length, 5); i++) {
                     allColumns[i] = columns[i] ? columns[i].trim() : '';
@@ -993,6 +981,8 @@
                     number: phoneNumber,
                     normalizedNumber: normalizePhoneNumber(phoneNumber),
                     status: 'Pending',
+                    agentId: '',
+                    callDate: '',
                     remarks: 'Not processed yet'
                 };
             });
@@ -1008,6 +998,7 @@
             
             // Show counter
             document.getElementById('counter').style.display = 'block';
+            document.getElementById('remainingNumbers').style.display = 'block';
             
             // Close the modal and clear the textarea
             closeAddScrapModal();
@@ -1057,7 +1048,7 @@
                 return;
             }
 
-            // Parse CC data to extract phone numbers and staff IDs
+            // Parse CC data to extract phone numbers, staff IDs and call dates
             const ccRows = ccDataText.split(/\r\n|\n|\r/).filter(row => row.trim() !== '');
             
             let processedCount = 0;
@@ -1082,11 +1073,18 @@
                 let staffId = null;
                 if (columns.length >= 15) {
                     const idMatch = columns[14].match(/\b\d{4,5}\b/);
-                    if (idMatch) staffId = parseInt(idMatch[0]);
+                    if (idMatch) staffId = idMatch[0]; // Keep as string to match '0000'
                 } else {
                     // If not enough columns, try to find any ID in the row
                     const idMatch = row.match(/\b\d{4,5}\b/);
-                    if (idMatch) staffId = parseInt(idMatch[0]);
+                    if (idMatch) staffId = idMatch[0];
+                }
+                
+                // Try to find call date in column B (index 1)
+                let callDate = '';
+                if (columns.length >= 2) {
+                    const dateMatch = columns[1].match(/\d{4}-\d{2}-\d{2}/);
+                    if (dateMatch) callDate = dateMatch[0];
                 }
                 
                 // Find matching scrap data item
@@ -1099,6 +1097,8 @@
                 if (matchingItem) {
                     if (staffId !== null && obAgentIDs.has(staffId)) {
                         matchingItem.status = 'Closed';
+                        matchingItem.agentId = staffId;
+                        matchingItem.callDate = callDate;
                         // Preserve existing remarks if they exist in other columns
                         if (matchingItem.columns.length > 6 && matchingItem.columns[6]) {
                             matchingItem.remarks = matchingItem.columns[6] + ` | OB Agent ID ${staffId} found`;
@@ -1141,7 +1141,7 @@
                 // Add empty rows for better UI
                 for (let i = 0; i < 3; i++) {
                     const row = document.createElement('tr');
-                    for (let j = 0; j < 7; j++) {
+                    for (let j = 0; j < 9; j++) {
                         const td = document.createElement('td');
                         td.innerHTML = '&nbsp;';
                         row.appendChild(td);
@@ -1186,6 +1186,16 @@
                 }
                 row.appendChild(statusCell);
                 
+                // Add agent ID cell
+                const agentIdCell = document.createElement('td');
+                agentIdCell.textContent = item.agentId || '';
+                row.appendChild(agentIdCell);
+                
+                // Add call date cell
+                const callDateCell = document.createElement('td');
+                callDateCell.textContent = item.callDate || '';
+                row.appendChild(callDateCell);
+                
                 // Add remarks cell
                 const remarksCell = document.createElement('td');
                 remarksCell.textContent = item.remarks;
@@ -1214,9 +1224,11 @@
             
             const openCount = scrapData.filter(item => item.status === 'Open').length;
             const closedCount = scrapData.filter(item => item.status === 'Closed').length;
+            const pendingCount = scrapData.filter(item => item.status === 'Pending').length;
             
             document.getElementById('openNumbers').textContent = openCount;
             document.getElementById('closedNumbers').textContent = closedCount;
+            document.getElementById('pendingNumbers').textContent = pendingCount;
             
             // Update next number index
             document.getElementById('nextNumberIndex').textContent = currentIndex + 1;
@@ -1240,15 +1252,17 @@
                 filteredData = scrapData.filter(item => item.status === 'Closed');
             }
             
-            // Create CSV-like text with all original columns plus status and remarks
+            // Create CSV-like text with all original columns plus status, agent ID, call date and remarks
             const rows = filteredData.map(item => {
                 const row = [...item.columns]; // Copy all original columns
                 
                 // Ensure we have at least 5 columns
                 while (row.length < 5) row.push('');
                 
-                // Add status and remarks
+                // Add status, agent ID, call date and remarks
                 row.push(item.status);
+                row.push(item.agentId || '');
+                row.push(item.callDate || '');
                 row.push(item.remarks);
                 
                 return row;
@@ -1290,7 +1304,15 @@
                     tick.style.display = 'none';
                 }, 2000);
                 
-                showCopyStatus(`Copied: ${numberToCopy} (${item.status})`, true);
+                let statusMsg = `Copied: ${numberToCopy} (${item.status})`;
+                if (item.status === 'Closed' && item.agentId) {
+                    statusMsg += ` | Agent ID: ${item.agentId}`;
+                }
+                if (item.status === 'Closed' && item.callDate) {
+                    statusMsg += ` | Date: ${item.callDate}`;
+                }
+                
+                showCopyStatus(statusMsg, true);
                 
                 // Move to next number
                 currentIndex++;
@@ -1327,7 +1349,15 @@
                     tick.style.display = 'none';
                 }, 2000);
                 
-                showCopyStatus(`Copied: ${numberToCopy} (${item.status})`, true);
+                let statusMsg = `Copied: ${numberToCopy} (${item.status})`;
+                if (item.status === 'Closed' && item.agentId) {
+                    statusMsg += ` | Agent ID: ${item.agentId}`;
+                }
+                if (item.status === 'Closed' && item.callDate) {
+                    statusMsg += ` | Date: ${item.callDate}`;
+                }
+                
+                showCopyStatus(statusMsg, true);
                 
                 // Update counter
                 updateCounter();
@@ -1367,40 +1397,11 @@
         }
 
         function resetDefaultOBIDs() {
-            // Reset to default OB Agent IDs
-            obAgentIDs = new Set([
-                46857, 10949, 4295, 45668, 45720, 11099, 44715, 48343, 46973, 54884, 2743, 48618, 48641, 48152, 45403, 2323, 
-                48646, 4826, 11911, 44372, 4900, 47923, 47455, 48587, 54888, 3239, 2680, 48883, 47856, 46238, 48882, 46771, 
-                48362, 44799, 48036, 48375, 44761, 47792, 44457, 48872, 46088, 48126, 2697, 43942, 43207, 46288, 43406, 48396, 
-                2101, 54871, 48664, 48932, 48606, 2593, 11488, 44374, 2413, 43365, 44312, 46487, 42234, 48122, 43647, 45470, 
-                11929, 45863, 2547, 46958, 11475, 46779, 48623, 47104, 47100, 48614, 43075, 48277, 44512, 43393, 42113, 45964, 
-                46633, 48346, 42482, 3011, 44790, 2453, 42141, 2681, 2225, 43171, 49026, 48265, 48805, 46871, 46543, 46019, 
-                42071, 47850, 3024, 2726, 11407, 3070, 46602, 54872, 48594, 2434, 48284, 45910, 3091, 46976, 46002, 48795, 
-                47829, 48048, 11797, 44836, 5675, 48808, 44551, 48297, 44877, 4790, 47838, 46067, 2267, 49091, 48342, 42002, 
-                6364, 48796, 45779, 48313, 6058, 48215, 2282, 48609, 46854, 44619, 48120, 45878, 42500, 3346, 49128, 42036, 
-                4937, 46654, 43930, 45474, 54883, 43810, 48777, 48197, 11888, 46450, 43760, 43272, 49130, 45658, 48865, 48133, 
-                42219, 46849, 54870, 48972, 48925, 46837, 48368, 48886, 47934, 48638, 49047, 49133, 43374, 42856, 47916, 46366, 
-                46291, 44000, 48690, 44041, 45000, 47878, 44080, 44015, 2706, 48616, 49145, 48046, 46931, 46641, 48665, 49112, 
-                48642, 46966, 6050, 47449, 45833, 46877, 48387, 48931, 49111, 48739, 45570, 44788, 45670, 48417, 45545, 2800, 
-                48671, 48801, 4448, 48354, 47750, 46936, 43856, 2942, 3932, 47786, 48586, 48870, 42006, 44144, 4002, 48800, 
-                48667, 44688, 2846, 3330, 45854, 48194, 3143, 49152, 49029, 42265, 3231, 45673, 48052, 48927, 42504, 4355, 
-                49123, 48153, 42046, 2946, 48621, 43593, 48988, 44545, 45660, 48813, 48659, 48033, 4048, 45401, 46466, 42009, 
-                48328, 48949, 3054, 49052, 49021, 48878, 2284, 48863, 46962, 49076, 45461, 46824, 48896, 45980, 44554, 48906, 
-                48745, 4385, 43874, 44699, 44115, 48652, 48971, 43713, 4037, 48975, 3903, 49002, 42172, 49088, 49087, 2919, 
-                44184, 48011, 48706, 48137, 48034, 48803, 48910, 47393, 46770, 47855, 3167, 48504, 48781, 48729, 47075, 48992, 
-                45913, 4500, 42003, 48890, 46681, 48741, 4696, 47742, 44188, 47961, 47487, 48676, 47950, 49134, 48718, 48782, 
-                46693, 4945, 43753, 2763, 47427, 3710, 49120, 48981, 11848, 48054, 48394, 48864, 3025, 54895, 49043, 2902, 
-                48383, 46471, 49151, 48709, 48163, 48151, 48941, 2755, 49044, 3009, 49146, 46923, 45880, 48854, 47745, 49110, 
-                44169, 4276, 43048, 49006, 44156, 48708, 48702, 48884, 46457, 49031, 49142, 4386, 49109, 43304, 49041, 2868, 
-                49025, 49007, 47754, 44862, 49045, 48207, 47125, 45992, 49141, 43147, 49046, 5991, 46772, 4882, 49147, 48982, 
-                48268, 47788, 48135, 45807, 47784, 46875, 48836, 46872, 42087, 45879, 44472, 43319, 48900, 48688, 43395, 46351, 
-                49140, 49154, 48802, 6042, 48902, 49099, 49080, 48668, 2723, 48697, 48682, 48978, 48123, 47079, 49093, 48707, 
-                49129, 49150, 49137, 48714, 49079, 48156, 48833, 46093, 48711, 48851, 43625, 48898, 49034, 48689, 49138, 48698, 
-                49105, 48935, 49102, 49020, 49148, 48936, 47207, 49032, 48627, 48282, 49040, 47230, 48380
-            ]);
+            // Reset to default OB Agent ID (0000)
+            obAgentIDs = new Set(['0000']);
             
-            document.getElementById('obIDsArea').textContent = Array.from(obAgentIDs).join('\n');
-            showCopyStatus('Default OB Agent IDs have been restored.', true);
+            document.getElementById('obIDsArea').textContent = '0000';
+            showCopyStatus('Default OB Agent ID (0000) has been restored.', true);
         }
 
         function saveOBIDs() {
@@ -1414,8 +1415,7 @@
             // Parse the IDs (one per line, numeric only)
             const newIDs = obIDsText.split(/\r\n|\n|\r/)
                 .map(id => id.trim())
-                .filter(id => /^\d+$/.test(id))
-                .map(id => parseInt(id));
+                .filter(id => /^\d+$/.test(id));
             
             if (newIDs.length === 0) {
                 showCopyStatus('No valid OB Agent IDs found. Please enter numeric IDs only.', false);
@@ -1430,6 +1430,11 @@
             
             closeEditOBIDsModal();
             showCopyStatus(`Saved ${obAgentIDs.size} OB Agent IDs. They will be used for processing.`, true);
+            
+            // Reprocess the data with new OB IDs
+            if (scrapData.length > 0) {
+                processCCData();
+            }
         }
 
         // Handle paste events for text areas
