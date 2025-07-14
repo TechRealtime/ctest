@@ -1058,6 +1058,11 @@
             ccRows.forEach(row => {
                 const columns = row.split(/\t/);
                 
+                // Skip empty rows or header rows
+                if (columns.length < 2 || columns[0].trim() === 'SN' || !columns[0].trim()) {
+                    return;
+                }
+                
                 // Try to find phone number in column G (index 6) or similar
                 let phoneNumber = '';
                 if (columns.length >= 7) {
@@ -1081,11 +1086,13 @@
                     if (idMatch) staffId = parseInt(idMatch[0]);
                 }
                 
-                // Try to find call date in column B (index 1) or similar
+                // Try to find call date in column B (index 1) - format YYYY-MM-DD
                 let callDate = '';
                 if (columns.length >= 2) {
-                    const dateMatch = columns[1].match(/\d{4}-\d{2}-\d{2}/);
-                    if (dateMatch) callDate = dateMatch[0];
+                    const dateMatch = columns[1].match(/(\d{4}-\d{2}-\d{2})/);
+                    if (dateMatch) {
+                        callDate = dateMatch[1]; // Extract just the date part (YYYY-MM-DD)
+                    }
                 }
                 
                 // Find matching scrap data item
