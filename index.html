@@ -714,13 +714,15 @@
                             <th>D</th>
                             <th>E</th>
                             <th>Status</th>
+                            <th>Agent ID</th>
+                            <th>Call Date</th>
                             <th>Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -893,62 +895,46 @@
             pasteArea.focus(); // Ensure focus is on the text area
 
             try {
-                let clipboardText = '';
-                
-                // Try modern Clipboard API first
-                try {
-                    const clipboardItems = await navigator.clipboard.read();
-                    for (const clipboardItem of clipboardItems) {
-                        for (const type of clipboardItem.types) {
-                            if (type === 'text/plain') {
-                                const blob = await clipboardItem.getType(type);
-                                clipboardText = await blob.text();
-                                break;
+                const clipboardItems = await navigator.clipboard.read();
+                for (const clipboardItem of clipboardItems) {
+                    for (const type of clipboardItem.types) {
+                        if (type === 'text/plain') {
+                            const blob = await clipboardItem.getType(type);
+                            const clipboardText = await blob.text();
+                            
+                            const selection = window.getSelection();
+                            const currentText = pasteArea.textContent;
+                            
+                            // Add separator if there's existing content
+                            const separator = currentText && !currentText.endsWith('\n') ? '\n' : '';
+                            
+                            if (!selection.isCollapsed) {
+                                // Replace selection
+                                const range = selection.getRangeAt(0);
+                                range.deleteContents();
+                                range.insertNode(document.createTextNode(separator + clipboardText));
+                                
+                                // Move cursor to end of pasted text
+                                range.collapse(false);
+                                selection.removeAllRanges();
+                                selection.addRange(range);
+                            } else {
+                                // Append at cursor or at end if no cursor position
+                                const cursorPos = selection.anchorOffset;
+                                pasteArea.textContent = currentText.slice(0, cursorPos) + separator + clipboardText + currentText.slice(cursorPos);
+                                
+                                // Move cursor to end of pasted text
+                                const range = document.createRange();
+                                range.selectNodeContents(pasteArea);
+                                range.collapse(false);
+                                selection.removeAllRanges();
+                                selection.addRange(range);
                             }
+                            return;
                         }
                     }
-                } catch (err) {
-                    // Fallback to deprecated clipboardData API
-                    if (window.clipboardData && window.clipboardData.getData) {
-                        clipboardText = window.clipboardData.getData('Text');
-                    } else {
-                        throw err;
-                    }
                 }
-
-                if (!clipboardText) {
-                    showCopyStatus('No text data found in clipboard', false);
-                    return;
-                }
-
-                const selection = window.getSelection();
-                const currentText = pasteArea.textContent;
-                
-                // Add separator if there's existing content
-                const separator = currentText && !currentText.endsWith('\n') ? '\n' : '';
-                
-                if (!selection.isCollapsed) {
-                    // Replace selection
-                    const range = selection.getRangeAt(0);
-                    range.deleteContents();
-                    range.insertNode(document.createTextNode(separator + clipboardText));
-                    
-                    // Move cursor to end of pasted text
-                    range.collapse(false);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                } else {
-                    // Append at cursor or at end if no cursor position
-                    const cursorPos = selection.anchorOffset;
-                    pasteArea.textContent = currentText.slice(0, cursorPos) + separator + clipboardText + currentText.slice(cursorPos);
-                    
-                    // Move cursor to end of pasted text
-                    const range = document.createRange();
-                    range.selectNodeContents(pasteArea);
-                    range.collapse(false);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                }
+                showCopyStatus('No text data found in clipboard', false);
             } catch (err) {
                 console.error('Failed to paste:', err);
                 showCopyStatus('Failed to paste. Please use Ctrl+V or right-click to paste.', false);
@@ -986,7 +972,7 @@
                 const columns = row.split(/\t/);
                 let phoneNumber = columns[0] ? columns[0].trim() : '';
                 
-                // Preserve all original columns (up to 10 columns)
+                // Preserve all original columns (up to 5 columns)
                 const allColumns = [];
                 for (let i = 0; i < Math.max(columns.length, 5); i++) {
                     allColumns[i] = columns[i] ? columns[i].trim() : '';
@@ -997,9 +983,9 @@
                     number: phoneNumber,
                     normalizedNumber: normalizePhoneNumber(phoneNumber),
                     status: 'Pending',
-                    remarks: 'Not processed yet',
-                    lastAgentId: '',
-                    lastCallDate: ''
+                    agentId: '',
+                    callDate: '',
+                    remarks: 'Not processed yet'
                 };
             });
 
@@ -1063,7 +1049,7 @@
                 return;
             }
 
-            // Parse CC data to extract phone numbers and staff IDs
+            // Parse CC data to extract phone numbers, staff IDs, and call dates
             const ccRows = ccDataText.split(/\r\n|\n|\r/).filter(row => row.trim() !== '');
             
             let processedCount = 0;
@@ -1112,18 +1098,14 @@
                 if (matchingItem) {
                     if (staffId !== null && obAgentIDs.has(staffId)) {
                         matchingItem.status = 'Closed';
-                        matchingItem.lastAgentId = staffId;
-                        matchingItem.lastCallDate = callDate;
-                        
-                        // Format remarks with agent ID and date
-                        let remarks = `OB Agent ID ${staffId}`;
-                        if (callDate) remarks += ` ${callDate}`;
+                        matchingItem.agentId = staffId;
+                        matchingItem.callDate = callDate;
                         
                         // Preserve existing remarks if they exist in other columns
                         if (matchingItem.columns.length > 6 && matchingItem.columns[6]) {
-                            matchingItem.remarks = matchingItem.columns[6] + ` | ${remarks}`;
+                            matchingItem.remarks = matchingItem.columns[6] + ` | OB Agent ID ${staffId} found`;
                         } else {
-                            matchingItem.remarks = remarks;
+                            matchingItem.remarks = `OB Agent ID ${staffId} found`;
                         }
                         processedCount++;
                     } else if (matchingItem.status === 'Pending') {
@@ -1161,7 +1143,7 @@
                 // Add empty rows for better UI
                 for (let i = 0; i < 3; i++) {
                     const row = document.createElement('tr');
-                    for (let j = 0; j < 7; j++) {
+                    for (let j = 0; j < 9; j++) {
                         const td = document.createElement('td');
                         td.innerHTML = '&nbsp;';
                         row.appendChild(td);
@@ -1206,6 +1188,16 @@
                 }
                 row.appendChild(statusCell);
                 
+                // Add agent ID cell
+                const agentCell = document.createElement('td');
+                agentCell.textContent = item.agentId || '';
+                row.appendChild(agentCell);
+                
+                // Add call date cell
+                const dateCell = document.createElement('td');
+                dateCell.textContent = item.callDate || '';
+                row.appendChild(dateCell);
+                
                 // Add remarks cell
                 const remarksCell = document.createElement('td');
                 remarksCell.textContent = item.remarks;
@@ -1234,7 +1226,7 @@
             
             const openCount = scrapData.filter(item => item.status === 'Open').length;
             const closedCount = scrapData.filter(item => item.status === 'Closed').length;
-            const remainingCount = scrapData.length - openCount - closedCount;
+            const remainingCount = scrapData.length - (openCount + closedCount);
             
             document.getElementById('openNumbers').textContent = openCount;
             document.getElementById('closedNumbers').textContent = closedCount;
@@ -1269,8 +1261,10 @@
                 // Ensure we have at least 5 columns
                 while (row.length < 5) row.push('');
                 
-                // Add status and remarks
+                // Add status, agent ID, call date and remarks
                 row.push(item.status);
+                row.push(item.agentId || '');
+                row.push(item.callDate || '');
                 row.push(item.remarks);
                 
                 return row;
