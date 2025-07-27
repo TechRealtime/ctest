@@ -171,7 +171,7 @@
             top: 15px;
             background: var(--primary);
             color: white;
-            padding: 24px 22px;
+            padding: 8px 12px;
             border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s;
@@ -709,13 +709,12 @@
                             <th>E</th>
                             <th>F (Status)</th>
                             <th>G (Remarks)</th>
-                            <th>H (Contact Date)</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
-                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+                        <tr><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -782,6 +781,61 @@
     </footer>
 
     <script>
+        // Package duration mapping - updated to match accurate calculations
+        const packageDurations = {
+            'weekly': 6,       // 7 days (6 days + activation day)
+            'monthly': 29,      // 30 days (29 days + activation day)
+            '3 month': 89,      // 90 days (89 days + activation day)
+            '3months': 89,
+            'triple': 89,
+            'hattrick': 89,
+            '6 month': 179,     // 180 days (179 days + activation day)
+            '6months': 179,
+            '12 month': 364,     // 365 days (364 days + activation day)
+            '12months': 364,
+            'yearly': 364,
+            'annual': 364,
+            'supreme': 29,
+            'premium': 29,
+            'pro': 29,
+            'max': 29,
+            'bundle': 29
+        };
+
+        let allResults = []; // Store all results for filtering
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('ccDataArea').focus();
+            
+            // Set up Hattrick filter switch
+            document.getElementById('hattrickOnlySwitch')?.addEventListener('change', function() {
+                if (allResults.length > 0) {
+                    displayResults(this.checked ? 
+                        allResults.filter(r => r.duration === 89) : 
+                        allResults);
+                }
+            });
+        });
+
+        function pasteData(areaId) {
+            navigator.clipboard.readText().then(text => {
+                const pasteArea = document.getElementById(areaId);
+                // Append to existing content with newline if needed
+                if (pasteArea.textContent && !pasteArea.textContent.endsWith('\n')) {
+                    pasteArea.textContent += '\n' + text;
+                } else {
+                    pasteArea.textContent += text;
+                }
+                // Ensure consistent font size
+                pasteArea.style.fontSize = '14px';
+                pasteArea.style.lineHeight = '1.5';
+            }).catch(err => {
+                console.error('Failed to read clipboard:', err);
+                document.getElementById(areaId).focus();
+                alert('Please use Ctrl+V to paste your data into the input box');
+            });
+        }
+
         // Store processed data for later use
         let scrapData = [];
         let currentIndex = 0;
@@ -819,138 +873,11 @@
         let isDarkMode = false;
         let currentFilter = 'all';
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Load saved OB Agent IDs from localStorage if available
-            const savedOBIDs = localStorage.getItem('obAgentIDs');
-            if (savedOBIDs) {
-                obAgentIDs = new Set(JSON.parse(savedOBIDs));
-            }
-            
-            // Check for saved theme preference
-            if (localStorage.getItem('darkMode') === 'enabled') {
-                enableDarkMode();
-            }
-
-            // Add keyboard shortcuts
-            document.addEventListener('keydown', function(e) {
-                // Ctrl+Enter for Copy Next
-                if (e.ctrlKey && e.key === 'Enter') {
-                    e.preventDefault();
-                    copyNextNumber();
-                }
-                
-                // Ctrl+Backspace for Copy Back
-                if (e.ctrlKey && e.key === 'Backspace') {
-                    e.preventDefault();
-                    copyPreviousNumber();
-                }
-                
-                // Ctrl+Shift+Enter for Start Over
-                if (e.ctrlKey && e.shiftKey && e.key === 'Enter') {
-                    e.preventDefault();
-                    startOver();
-                }
-            });
-        });
-
-        // Theme toggle functionality
-        document.getElementById('themeToggle').addEventListener('click', function() {
-            isDarkMode = !isDarkMode;
-            if (isDarkMode) {
-                enableDarkMode();
-                localStorage.setItem('darkMode', 'enabled');
-            } else {
-                disableDarkMode();
-                localStorage.setItem('darkMode', 'disabled');
-            }
-        });
-
-        function enableDarkMode() {
-            document.body.classList.add('dark-mode');
-            document.getElementById('themeToggle').innerHTML = '<i class="fas fa-sun"></i>';
-            isDarkMode = true;
-        }
-
-        function disableDarkMode() {
-            document.body.classList.remove('dark-mode');
-            document.getElementById('themeToggle').innerHTML = '<i class="fas fa-moon"></i>';
-            isDarkMode = false;
-        }
-
-        function startOver() {
-            currentIndex = 0;
-            updateCounter();
-            showCopyStatus('Reset to start position', true);
-        }
-
-        async function pasteData(areaId) {
-            try {
-                const clipboardItems = await navigator.clipboard.read();
-                for (const clipboardItem of clipboardItems) {
-                    for (const type of clipboardItem.types) {
-                        if (type === 'text/plain') {
-                            const blob = await clipboardItem.getType(type);
-                            const text = await blob.text();
-                            
-                            // Get current selection/cursor position
-                            const pasteArea = document.getElementById(areaId);
-                            const selection = window.getSelection();
-                            const currentText = pasteArea.textContent;
-                            
-                            // Add separator if there's existing content
-                            const separator = currentText && !currentText.endsWith('\n') ? '\n' : '';
-                            
-                            if (!selection.isCollapsed) {
-                                // Replace selection
-                                const range = selection.getRangeAt(0);
-                                range.deleteContents();
-                                range.insertNode(document.createTextNode(separator + text));
-                            } else {
-                                // Append at cursor
-                                const cursorPos = selection.anchorOffset;
-                                pasteArea.textContent = currentText.slice(0, cursorPos) + separator + text + currentText.slice(cursorPos);
-                            }
-                            
-                            // Move cursor to end of pasted content
-                            const range = document.createRange();
-                            range.selectNodeContents(pasteArea);
-                            range.collapse(false);
-                            selection.removeAllRanges();
-                            selection.addRange(range);
-                            
-                            return;
-                        }
-                    }
-                }
-                showCopyStatus('No text data found in clipboard', false);
-            } catch (err) {
-                console.error('Failed to read clipboard:', err);
-                document.getElementById(areaId).focus();
-                showCopyStatus('Please use Ctrl+V to paste your data into the input box', false);
-            }
-        }
-
         // Normalize phone numbers by removing all non-digit characters
         function normalizePhoneNumber(phone) {
             if (!phone) return '';
             // Remove all non-digit characters
             return phone.replace(/\D/g, '');
-        }
-
-        // Extract date from timestamp (handles various formats with extra spaces)
-        function extractDateFromTimestamp(timestamp) {
-            if (!timestamp) return 'N/A';
-            
-            // Clean up the timestamp by removing extra spaces
-            timestamp = timestamp.trim().replace(/\s+/g, ' ');
-            
-            // Try to match date pattern (YYYY-MM-DD)
-            const dateMatch = timestamp.match(/(\d{4}-\d{2}-\d{2})/);
-            if (dateMatch) {
-                return dateMatch[0]; // Return just the date part
-            }
-            
-            return 'N/A';
         }
 
         function showAddScrapModal() {
@@ -982,8 +909,7 @@
                     number: phoneNumber,
                     normalizedNumber: normalizePhoneNumber(phoneNumber),
                     status: 'Pending',
-                    remarks: 'Not processed yet',
-                    contactDate: 'N/A' // Initialize contact date as N/A
+                    remarks: 'Not processed yet'
                 };
             });
 
@@ -1047,7 +973,7 @@
                 return;
             }
 
-            // Parse CC data to extract phone numbers, staff IDs, and contact dates
+            // Parse CC data to extract phone numbers and staff IDs
             const ccRows = ccDataText.split(/\r\n|\n|\r/).filter(row => row.trim() !== '');
             
             let processedCount = 0;
@@ -1079,15 +1005,6 @@
                     if (idMatch) staffId = parseInt(idMatch[0]);
                 }
                 
-                // Try to find contact start time (usually in column C or similar)
-                let contactDate = 'N/A';
-                for (let i = 0; i < Math.min(columns.length, 5); i++) {
-                    if (columns[i] && columns[i].match(/\d{4}-\d{2}-\d{2}/)) {
-                        contactDate = extractDateFromTimestamp(columns[i]);
-                        break;
-                    }
-                }
-                
                 // Find matching scrap data item
                 const matchingItem = scrapData.find(item => 
                     item.normalizedNumber === phoneNumber || 
@@ -1099,12 +1016,10 @@
                     if (staffId !== null && obAgentIDs.has(staffId)) {
                         matchingItem.status = 'Closed';
                         matchingItem.remarks = `OB Agent ID ${staffId} found`;
-                        matchingItem.contactDate = contactDate; // Set contact date for closed numbers
                         processedCount++;
                     } else if (matchingItem.status === 'Pending') {
                         matchingItem.status = 'Open';
                         matchingItem.remarks = staffId ? 'No OB Agent ID found' : 'No Staff ID found';
-                        matchingItem.contactDate = 'N/A'; // Keep as N/A for open numbers
                         processedCount++;
                     }
                 }
@@ -1132,7 +1047,7 @@
                 // Add empty rows for better UI
                 for (let i = 0; i < 3; i++) {
                     const row = document.createElement('tr');
-                    for (let j = 0; j < 8; j++) {
+                    for (let j = 0; j < 7; j++) {
                         const td = document.createElement('td');
                         td.innerHTML = '&nbsp;';
                         row.appendChild(td);
@@ -1189,11 +1104,6 @@
                 remarksCell.textContent = item.remarks;
                 row.appendChild(remarksCell);
                 
-                // Add contact date cell
-                const dateCell = document.createElement('td');
-                dateCell.textContent = item.contactDate;
-                row.appendChild(dateCell);
-                
                 tbody.appendChild(row);
             });
         }
@@ -1247,8 +1157,7 @@
             const rows = filteredData.map(item => [
                 ...item.columns.slice(0, 5),
                 item.status,
-                item.remarks,
-                item.contactDate
+                item.remarks
             ]);
             
             // Ensure we have 5 columns for each row
@@ -1256,7 +1165,6 @@
                 while (row.length < 5) row.push('');
                 row.push(row[5] || ''); // Status
                 row.push(row[6] || ''); // Remarks
-                row.push(row[7] || ''); // Contact Date
             });
             
             const csvContent = rows.map(row => row.join('\t')).join('\n');
